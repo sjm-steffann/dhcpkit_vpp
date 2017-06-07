@@ -10,9 +10,9 @@ Documentation
 -------------
 
 .. toctree::
-:maxdepth: 2
+    :maxdepth: 2
 
-        config/index
-        api/dhcpkit_vpp
-        changes
-        license
+    config/index
+    api/dhcpkit_vpp
+    changes
+    license

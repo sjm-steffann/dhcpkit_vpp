@@ -2,9 +2,9 @@ dhcpkit\_vpp package
 ====================
 
 .. automodule:: dhcpkit_vpp
-:members:
-        :undoc-members:
-                    :show-inheritance:
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Subpackages
 -----------
@@ -12,6 +12,7 @@ Subpackages
 .. toctree::
 
     dhcpkit_vpp.listeners
+    dhcpkit_vpp.protocols
 
 Submodules
 ----------

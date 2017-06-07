@@ -2,9 +2,9 @@ dhcpkit\_vpp\.listeners\.vpp package
 ====================================
 
 .. automodule:: dhcpkit_vpp.listeners.vpp
-:members:
-        :undoc-members:
-                    :show-inheritance:
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Submodules
 ----------

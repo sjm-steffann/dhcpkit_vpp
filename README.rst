@@ -9,16 +9,16 @@ Distribution status
 -------------------
 
 .. image:: https://img.shields.io/pypi/v/dhcpkit_vpp.svg
-:target: https://pypi.python.org/pypi/dhcpkit_vpp
+  :target: https://pypi.python.org/pypi/dhcpkit_vpp
 
 .. image:: https://img.shields.io/pypi/status/dhcpkit_vpp.svg
-:target: https://pypi.python.org/pypi/dhcpkit_vpp
+  :target: https://pypi.python.org/pypi/dhcpkit_vpp
 
 .. image:: https://img.shields.io/pypi/l/dhcpkit_vpp.svg
-:target: https://pypi.python.org/pypi/dhcpkit_vpp
+  :target: https://pypi.python.org/pypi/dhcpkit_vpp
 
 .. image:: https://img.shields.io/pypi/pyversions/dhcpkit_vpp.svg
-:target: https://pypi.python.org/pypi/dhcpkit_vpp
+  :target: https://pypi.python.org/pypi/dhcpkit_vpp
 
 .. image:: https://img.shields.io/pypi/dw/dhcpkit_vpp.svg
-:target: https://pypi.python.org/pypi/dhcpkit_vpp
+  :target: https://pypi.python.org/pypi/dhcpkit_vpp

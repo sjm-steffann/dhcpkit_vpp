@@ -7,14 +7,14 @@ Overview of sections
 --------------------
 
 .. toctree::
-:maxdepth: 1
+    :maxdepth: 1
 
-        vpp-interface
+    vpp-interface
 
 Overview of section types
 -------------------------
 
 .. toctree::
-:maxdepth: 2
+    :maxdepth: 2
 
-        listener_factory
+    listener_factory
