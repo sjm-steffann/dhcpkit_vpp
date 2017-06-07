@@ -3,9 +3,8 @@ Setup script for dhcpkit_vpp
 """
 import os
 
-from setuptools import find_packages, setup
-
 import dhcpkit_vpp
+from setuptools import find_packages, setup
 
 
 # Utility function to read the README file.
@@ -59,10 +58,22 @@ setup(
             # Listeners
             'listen-vpp         = dhcpkit_vpp.listeners.vpp',
         ],
+
+        'dhcpkit_vpp.protocols.layer3': [
+            '34525              = dhcpkit_vpp.protocols.layer3:IPv6',
+        ],
+
+        'dhcpkit_vpp.protocols.layer4': [
+            '17                 = dhcpkit_vpp.protocols.layer4:UDP',
+        ],
+
+        'dhcpkit_vpp.protocols.layer5': [
+            '547                = dhcpkit.ipv6.messages:Message',
+        ],
     },
 
     install_requires=[
-        'dhcpkit',
+        'dhcpkit > 1.0.4',
         'cffi',
     ],
 
