@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Remove the old generated docs
+rm -rf build/sphinx
+rm -rf docs/api/
+rm -rf docs/config/
+
+# Generate the API docs
+sphinx-apidoc --force --separate --module-first --doc-project=DHCPKit-VPP --output-dir=docs/api dhcpkit_vpp
+rm docs/api/modules.rst
+
+# Generate the config docs
+dhcpkit-generate-config-docs --force --extension dhcpkit_vpp --output-dir docs/config/

@@ -1,0 +1,110 @@
+<component xmlns="https://raw.githubusercontent.com/zopefoundation/ZConfig/master/doc/schema.dtd"
+           prefix="dhcpkit_vpp.listeners.vpp.config">
+    <!-- VPP interface -->
+    <sectiontype name="vpp-interface"
+                 datatype=".VPPInterface">
+        <description>
+            VPP Interface to listen on
+        </description>
+        <example><![CDATA[
+            <vpp-interface GigabitEthernet0/1/2>
+                reply-from fe80::1
+                link-address 2001:db8::1
+            </vpp-interface>
+        ]]></example>
+
+        <key name="accept-multicast" datatype="boolean" default="yes">
+            <description>
+                Whether to process multicast messages received on this interface
+            </description>
+        </key>
+
+        <key name="accept-unicast" datatype="boolean" default="yes">
+            <description>
+                Whether to process unicast messages received on this interface
+            </description>
+        </key>
+
+        <key name="reply-from" datatype="ipaddress.IPv6Address">
+            <description>
+                The link-local address to send on-link replies from
+            </description>
+            <metadefault>
+                The first link-local address found on the interface
+            </metadefault>
+        </key>
+
+        <key name="link-address" datatype="ipaddress.IPv6Address">
+            <description>
+                A global unicast address used to identify the link to filters and handlers.
+                It doesn't even need to exist.
+            </description>
+            <metadefault>
+                The first global unicast address found on the interface, or ``::`` otherwise
+            </metadefault>
+        </key>
+    </sectiontype>
+
+    <sectiontype name="listen-vpp"
+                 extends="listener_base"
+                 implements="listener_factory"
+                 datatype=".VPPListenerFactory">
+        <description><![CDATA[
+            This listener sets up a two-way connection to a VPP instance using Unix domain sockets. It will learn the
+            server created by the VPP instance using the VPP Python API. The name of the socket endpoint it creates for
+            itself (so VPP can send messages to DHCPKit) is specified as the name of the section.
+
+            With this listener DHCPKit can become a DHCPv6 server for VPP. You must list all VPP interfaces that DHCPKit
+            should respond to.
+
+            VPP must be configured to create a punt socket::
+
+                punt {
+                    socket /run/vpp/punt_socket
+                }
+
+            This socket is used to send messages from DHCPKit back to VPP. You don't need to specify this socket in the
+            DHCPKit configuration, it will learn it through the VPP API.
+        ]]></description>
+
+        <example><![CDATA[
+            <listen-vpp /run/vpp/client_socket>
+                namespace-prefix foo
+
+                <vpp-interface tap-0 />
+
+                <vpp-interface GigabitEthernet0/1/2>
+                    reply-from fe80::1
+                    link-address 2001:db8::1
+                </vpp-interface>
+            </listen-vpp>
+        ]]></example>
+
+        <key name="namespace-prefix">
+            <description><![CDATA[
+                Namespace prefix for the API. When specifying a prefix in the VPP startup configuration::
+
+                    api-segment {
+                        prefix foo
+                    }
+
+                then specify `foo` here.
+            ]]></description>
+            <example>
+                namespace-prefix foo
+            </example>
+        </key>
+
+        <key name="api-definitions" datatype="existing-directory">
+            <description>
+                Path to the JSON files that define the API. If left empty the default path for your system will be
+                used.
+            </description>
+            <example>
+                api-definitions /usr/share/vpp/api
+            </example>
+        </key>
+
+        <multisection type="vpp-interface" name="*" required="yes" attribute="vpp_interfaces"/>
+    </sectiontype>
+</component>
