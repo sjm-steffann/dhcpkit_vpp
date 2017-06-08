@@ -110,8 +110,9 @@ class Ethernet(Layer2Frame):
         my_offset += 2
 
         # Determine the layer 3 type based on the ethertype
+        from dhcpkit_vpp.protocols.layer3 import UnknownLayer3Packet
         from dhcpkit_vpp.protocols.layer3_registry import protocol_layer3_registry
-        layer3_class = protocol_layer3_registry.get(self.ethertype, UnknownProtocolElement)
+        layer3_class = protocol_layer3_registry.get(self.ethertype, UnknownLayer3Packet)
 
         max_payload_len = max_length - my_offset
         payload_len, self.payload = layer3_class.parse(buffer, offset=offset + my_offset, length=max_payload_len)

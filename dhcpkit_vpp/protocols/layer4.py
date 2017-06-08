@@ -3,8 +3,25 @@ Classes and constants for layer 4 protocols
 """
 from struct import unpack_from, pack
 
+from dhcpkit.protocol_element import UnknownProtocolElement
+
 from dhcpkit_vpp.protocols import Layer3Packet, Layer4Protocol
 from dhcpkit_vpp.protocols.utils import ones_complement_checksum
+
+
+class UnknownLayer4Protocol(Layer4Protocol, UnknownProtocolElement):
+    """
+    A layer 3 packet of unknown type
+    """
+
+    @property
+    def length(self):
+        """
+        The length of our data
+
+        :return: The length
+        """
+        return len(self.data)
 
 
 class UDP(Layer4Protocol):

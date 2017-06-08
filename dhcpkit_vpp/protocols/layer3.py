@@ -10,6 +10,21 @@ from dhcpkit_vpp.protocols import Layer3Packet, Layer4Protocol
 from dhcpkit_vpp.protocols.layer2 import Layer2Frame
 
 
+class UnknownLayer3Packet(Layer3Packet, UnknownProtocolElement):
+    """
+    A layer 3 packet of unknown type
+    """
+
+    def get_pseudo_header(self, for_payload: Layer4Protocol) -> bytes:
+        """
+        We don't have a pseudo header
+
+        :param for_payload: Get the pseudo header for the given layer 4 protocol
+        :return: The pseudo header
+        """
+        return b''
+
+
 class IPv6(Layer3Packet):
     """
     The class for IPv6 packets.
@@ -125,8 +140,9 @@ class IPv6(Layer3Packet):
         my_offset += 16
 
         # Determine the layer 4 type based on the next header value
+        from dhcpkit_vpp.protocols.layer4 import UnknownLayer4Protocol
         from dhcpkit_vpp.protocols.layer4_registry import protocol_layer4_registry
-        layer4_class = protocol_layer4_registry.get(self.next_header, UnknownProtocolElement)
+        layer4_class = protocol_layer4_registry.get(self.next_header, UnknownLayer4Protocol)
 
         max_payload_len = max_length - my_offset
         if payload_len > max_payload_len:
