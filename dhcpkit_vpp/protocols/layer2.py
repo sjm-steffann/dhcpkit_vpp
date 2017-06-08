@@ -7,11 +7,7 @@ from struct import pack, unpack_from
 from dhcpkit.protocol_element import ProtocolElement, UnknownProtocolElement, ElementDataRepresentation
 from dhcpkit.utils import normalise_hex
 
-
-class Layer2Frame(ProtocolElement):
-    """
-    Base class for layer 2 frames
-    """
+from dhcpkit_vpp.protocols import Layer2Frame
 
 
 class Ethernet(Layer2Frame):

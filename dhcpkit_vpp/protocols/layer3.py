@@ -6,14 +6,24 @@ from struct import unpack_from, pack
 
 from dhcpkit.protocol_element import ProtocolElement, UnknownProtocolElement
 
-from dhcpkit_vpp.protocols import Layer3Packet, Layer4Protocol
-from dhcpkit_vpp.protocols.layer2 import Layer2Frame
+from dhcpkit_vpp.protocols import Layer2Frame, Layer3Packet, Layer4Protocol
 
 
 class UnknownLayer3Packet(Layer3Packet, UnknownProtocolElement):
     """
     A layer 3 packet of unknown type
     """
+
+    @classmethod
+    def determine_class(cls, buffer: bytes, offset: int = 0) -> type:
+        """
+        Return the appropriate class to parse this element with.
+
+        :param buffer: The buffer to read data from
+        :param offset: The offset in the buffer where to start reading
+        :return: The best known class for this data
+        """
+        return UnknownLayer3Packet
 
     def get_pseudo_header(self, for_payload: Layer4Protocol) -> bytes:
         """
@@ -75,6 +85,9 @@ class IPv6(Layer3Packet):
         # Check if the source and destination are IPv6 addresses
         if not isinstance(self.source, IPv6Address):
             raise ValueError("Source must be an IPv6 address")
+
+        if self.source.is_multicast:
+            raise ValueError("Source must be a non-multicast IPv6 address")
 
         if not isinstance(self.destination, IPv6Address):
             raise ValueError("Destination must be an IPv6 address")
@@ -148,7 +161,7 @@ class IPv6(Layer3Packet):
         if payload_len > max_payload_len:
             raise ValueError("IPv6 payload is longer than available buffer")
 
-        payload_len, self.payload = layer4_class.parse(buffer, offset=offset + my_offset, length=max_payload_len)
+        payload_len, self.payload = layer4_class.parse(buffer, offset=offset + my_offset, length=payload_len)
         my_offset += payload_len
 
         return my_offset

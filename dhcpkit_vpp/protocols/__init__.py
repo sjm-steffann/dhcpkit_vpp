@@ -58,3 +58,9 @@ class Layer3Packet(ProtocolElement):
                 return current_item
 
             current_item = getattr(current_item, 'payload')
+
+
+class Layer2Frame(ProtocolElement):
+    """
+    Base class for layer 2 frames
+    """

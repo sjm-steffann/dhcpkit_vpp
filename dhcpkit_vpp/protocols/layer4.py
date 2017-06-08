@@ -14,6 +14,17 @@ class UnknownLayer4Protocol(Layer4Protocol, UnknownProtocolElement):
     A layer 3 packet of unknown type
     """
 
+    @classmethod
+    def determine_class(cls, buffer: bytes, offset: int = 0) -> type:
+        """
+        Return the appropriate class to parse this element with.
+
+        :param buffer: The buffer to read data from
+        :param offset: The offset in the buffer where to start reading
+        :return: The best known class for this data
+        """
+        return UnknownLayer4Protocol
+
     @property
     def length(self):
         """
@@ -22,6 +33,16 @@ class UnknownLayer4Protocol(Layer4Protocol, UnknownProtocolElement):
         :return: The length
         """
         return len(self.data)
+
+    def save(self, zero_checksum: bool = False, recalculate_checksum_for: Layer3Packet = None) -> bytearray:
+        """
+        Save the internal state of this object as a buffer.
+
+        :param zero_checksum: Save with zeroes where the checksum should be
+        :param recalculate_checksum_for: Recalculate the checksum for the given layer 3 packet headers
+        :return: The buffer with the data from this element
+        """
+        return self.data
 
 
 class UDP(Layer4Protocol):
@@ -113,13 +134,18 @@ class UDP(Layer4Protocol):
         self.source_port, self.destination_port, payload_len, self.checksum = unpack_from('!HHHH', buffer, offset)
         my_offset += 8
 
+        # Check included length, then correct it
+        if payload_len < 8:
+            raise ValueError("UDP packet length must be at least 8 bytes long")
+        payload_len -= 8
+
         # The layer 5 payload is captured as bytes
         max_payload_len = max_length - my_offset
-        if max_payload_len - 8 > payload_len:
+        if payload_len > max_payload_len:
             raise ValueError("UDP payload is longer than available buffer")
 
-        self.payload = buffer[offset + my_offset:offset + my_offset + payload_len - 8]
-        my_offset += payload_len - 8
+        self.payload = buffer[offset + my_offset:offset + my_offset + payload_len]
+        my_offset += payload_len
 
         return my_offset
 
