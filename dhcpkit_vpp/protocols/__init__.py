@@ -1,7 +1,6 @@
 """
 Classes and constants for protocol implementations
 """
-from typing import Optional
 
 from dhcpkit.protocol_element import ProtocolElement
 
@@ -29,6 +28,7 @@ class Layer4Protocol(ProtocolElement):
         :param recalculate_checksum_for: Recalculate the checksum for the given layer 3 packet headers
         :return: The buffer with the data from this element
         """
+        raise NotImplementedError("Save not implemented for {}".format(self.__class__.__name__))
 
 
 class Layer3Packet(ProtocolElement):
@@ -44,20 +44,6 @@ class Layer3Packet(ProtocolElement):
         :return: The pseudo header bytes
         """
         raise NotImplementedError("Pseudo header not implemented for {}".format(self.__class__.__name__))
-
-    @property
-    def final_payload(self) -> Optional[Layer4Protocol]:
-        """
-        Get the final payload of this packet.
-
-        :return: The final payload, if any
-        """
-        current_item = self
-        while current_item:
-            if isinstance(current_item, Layer4Protocol):
-                return current_item
-
-            current_item = getattr(current_item, 'payload')
 
 
 class Layer2Frame(ProtocolElement):

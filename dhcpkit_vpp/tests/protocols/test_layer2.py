@@ -4,8 +4,10 @@ Test whether layer 2 parsing and generating works
 import unittest
 from ipaddress import IPv6Address
 
+from dhcpkit.protocol_element import ElementDataRepresentation, UnknownProtocolElement
+
 from dhcpkit_vpp.protocols.layer2 import Ethernet
-from dhcpkit_vpp.protocols.layer3 import IPv6
+from dhcpkit_vpp.protocols.layer3 import IPv6, UnknownLayer3Packet
 from dhcpkit_vpp.protocols.layer4 import UDP
 from dhcpkit_vpp.tests.protocols import FrameTestCase
 
@@ -39,6 +41,91 @@ class Layer2FrameTestCase(FrameTestCase):
             )
         )
         self.parse_packet()
+
+    def test_display_source(self):
+        display = self.message.display_source()
+        self.assertIsInstance(display, ElementDataRepresentation)
+
+    def test_display_destination(self):
+        display = self.message.display_destination()
+        self.assertIsInstance(display, ElementDataRepresentation)
+
+    def test_display_ethertype(self):
+        display = self.message.display_ethertype()
+        self.assertIsInstance(display, ElementDataRepresentation)
+
+    def test_validate_source(self):
+        self.message.source = b'123456'
+        self.message.validate()
+
+        self.message.source = b'12345'
+        with self.assertRaisesRegex(ValueError, 'Source .* 6 bytes'):
+            self.message.validate()
+
+        self.message.source = '123456'
+        with self.assertRaisesRegex(ValueError, 'Source .* 6 bytes'):
+            self.message.validate()
+
+        self.message.source = '12345'
+        with self.assertRaisesRegex(ValueError, 'Source .* 6 bytes'):
+            self.message.validate()
+
+    def test_validate_destination(self):
+        self.message.destination = b'123456'
+        self.message.validate()
+
+        self.message.destination = b'12345'
+        with self.assertRaisesRegex(ValueError, 'Destination .* 6 bytes'):
+            self.message.validate()
+
+        self.message.destination = '123456'
+        with self.assertRaisesRegex(ValueError, 'Destination .* 6 bytes'):
+            self.message.validate()
+
+        self.message.destination = '12345'
+        with self.assertRaisesRegex(ValueError, 'Destination .* 6 bytes'):
+            self.message.validate()
+
+    def test_validate_ethertype(self):
+        self.check_unsigned_integer_property('ethertype', 16)
+
+    def test_validate_payload(self):
+        self.message.payload = b'Bad bad bad'
+        with self.assertRaisesRegex(ValueError, 'Payload .* protocol element'):
+            self.message.validate()
+
+    def test_ethernet_length(self):
+        with self.assertRaisesRegex(ValueError, '14 bytes'):
+            Ethernet.parse(bytes.fromhex('000000000000'
+                                         '000000000000'
+                                         '00'))
+
+        Ethernet.parse(bytes.fromhex('000000000000'
+                                     '000000000000'
+                                     '0000'))
+
+    def test_l3_payload_type(self):
+        message = Ethernet(
+            payload=UnknownLayer3Packet(b'1234')
+        )
+        packet = bytes.fromhex('000000000000'
+                               '000000000000'
+                               '0000'
+                               '31323334')
+        parsed_len, parsed_message = Ethernet.parse(packet)
+        self.assertEqual(parsed_len, len(packet))
+        self.assertEqual(parsed_message, message)
+        self.assertEqual(message.save(), packet)
+
+    def test_unknown_payload_type(self):
+        message = Ethernet(
+            payload=UnknownProtocolElement(b'1234')
+        )
+        packet = bytes.fromhex('000000000000'
+                               '000000000000'
+                               '0000'
+                               '31323334')
+        self.assertEqual(message.save(), packet)
 
 
 if __name__ == '__main__':
