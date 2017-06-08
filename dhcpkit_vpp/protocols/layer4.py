@@ -114,12 +114,12 @@ class UDP(Layer4Protocol):
         my_offset += 8
 
         # The layer 5 payload is captured as bytes
-        payload_len = max_length - my_offset
-        if payload_len - 8 > payload_len:
+        max_payload_len = max_length - my_offset
+        if max_payload_len - 8 > payload_len:
             raise ValueError("UDP payload is longer than available buffer")
 
-        self.payload = buffer[offset + my_offset:offset + my_offset + payload_len]
-        my_offset += payload_len
+        self.payload = buffer[offset + my_offset:offset + my_offset + payload_len - 8]
+        my_offset += payload_len - 8
 
         return my_offset
 
