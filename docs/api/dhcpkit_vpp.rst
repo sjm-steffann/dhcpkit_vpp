@@ -13,6 +13,7 @@ Subpackages
 
     dhcpkit_vpp.listeners
     dhcpkit_vpp.protocols
+    dhcpkit_vpp.tests
 
 Submodules
 ----------

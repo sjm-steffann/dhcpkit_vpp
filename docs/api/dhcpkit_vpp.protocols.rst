@@ -16,5 +16,5 @@ Submodules
    dhcpkit_vpp.protocols.layer3_registry
    dhcpkit_vpp.protocols.layer4
    dhcpkit_vpp.protocols.layer4_registry
-   dhcpkit_vpp.protocols.layer5_registry
+   dhcpkit_vpp.protocols.utils
 
