@@ -5,13 +5,9 @@ from ipaddress import IPv6Address
 from struct import unpack_from, pack
 
 from dhcpkit.protocol_element import ProtocolElement, UnknownProtocolElement
+
+from dhcpkit_vpp.protocols import Layer3Packet, Layer4Protocol
 from dhcpkit_vpp.protocols.layer2 import Layer2Frame
-
-
-class Layer3Packet(ProtocolElement):
-    """
-    Base class for layer 3 packets
-    """
 
 
 class IPv6(Layer3Packet):
@@ -75,6 +71,19 @@ class IPv6(Layer3Packet):
         # Check if all options are allowed
         self.validate_contains([self.payload])
         self.payload.validate()
+
+    def get_pseudo_header(self, l4_payload: Layer4Protocol) -> bytes:
+        """
+        Return the pseudo header for this protocol
+
+        :param l4_payload: The payload protocol to calculate the pseudo header for
+        :return: The pseudo header bytes
+        """
+        # This should be changed when routing headers are implemented
+        final_destination = self.destination.packed
+
+        return self.source.packed + final_destination + pack("!I3xB", l4_payload.length,
+                                                             l4_payload.protocol_number)
 
     def load_from(self, buffer: bytes, offset: int = 0, length: int = None) -> int:
         """
@@ -141,7 +150,10 @@ class IPv6(Layer3Packet):
             self.flow_label & 0xff,
         ])
 
-        payload = self.payload.save()
+        if isinstance(self.payload, Layer4Protocol):
+            payload = self.payload.save(recalculate_checksum_for=self)
+        else:
+            payload = self.payload.save()
 
         buffer.extend(pack('!HBB', len(payload), self.next_header, self.hop_limit))
         buffer.extend(self.source.packed)

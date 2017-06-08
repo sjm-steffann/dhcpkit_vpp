@@ -3,21 +3,15 @@ Classes and constants for layer 4 protocols
 """
 from struct import unpack_from, pack
 
-from dhcpkit.protocol_element import ProtocolElement
-
-from dhcpkit_vpp.protocols.layer3 import Layer3Packet
-
-
-class Layer4Protocol(ProtocolElement):
-    """
-    Base class for layer 4 protocols
-    """
+from dhcpkit_vpp.protocols import Layer3Packet, Layer4Protocol
+from dhcpkit_vpp.protocols.utils import ones_complement_checksum
 
 
 class UDP(Layer4Protocol):
     """
     The class for UDP packets.
     """
+    protocol_number = 17
 
     def __init__(self, source_port: int = 0, destination_port: int = 0, checksum: int = 0,
                  payload: bytes = b''):
@@ -37,6 +31,31 @@ class UDP(Layer4Protocol):
         :return: The best known class for this data
         """
         return UDP
+
+    def calculate_checksum(self, l3_packet: Layer3Packet):
+        """
+        Calculate the checksum based on the current payload and the provided layer 3 packet.
+
+        :param l3_packet: The layer 3 packet that contains this UDP message
+        :return: The calculated checksum
+        """
+        # Create the full message with pseudo header to calculate the checksum of
+        msg = bytearray(l3_packet.get_pseudo_header(self))
+        msg.extend(self.save(zero_checksum=True))
+        if len(msg) % 2 == 1:
+            # Pad to get even length
+            msg.append(0)
+
+        return ones_complement_checksum(msg)
+
+    @property
+    def length(self):
+        """
+        Return the length of this protocol+payload
+
+        :return: The length
+        """
+        return len(self.payload) + 8
 
     def validate(self):
         """
@@ -87,14 +106,24 @@ class UDP(Layer4Protocol):
 
         return my_offset
 
-    def save(self) -> bytearray:
+    def save(self, zero_checksum: bool = False, recalculate_checksum_for: Layer3Packet = None) -> bytearray:
         """
         Save the internal state of this object as a buffer.
 
+        :param zero_checksum: Save with zeroes where the checksum should be
+        :param recalculate_checksum_for: Recalculate the checksum for the given layer 3 packet headers
         :return: The buffer with the data from this element
         """
+        if zero_checksum:
+            checksum = 0
+        else:
+            if recalculate_checksum_for:
+                self.checksum = self.calculate_checksum(l3_packet=recalculate_checksum_for)
+
+            checksum = self.checksum
+
         buffer = bytearray()
-        buffer.extend(pack('!HHHH', self.source_port, self.destination_port, len(self.payload) + 8, self.checksum))
+        buffer.extend(pack('!HHHH', self.source_port, self.destination_port, self.length, checksum))
         buffer.extend(self.payload)
 
         return buffer
