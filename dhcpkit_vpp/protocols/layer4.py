@@ -3,7 +3,8 @@ Classes and constants for layer 4 protocols
 """
 from struct import unpack_from, pack
 
-from dhcpkit.protocol_element import ProtocolElement, UnknownProtocolElement
+from dhcpkit.protocol_element import ProtocolElement
+
 from dhcpkit_vpp.protocols.layer3 import Layer3Packet
 
 
@@ -19,7 +20,7 @@ class UDP(Layer4Protocol):
     """
 
     def __init__(self, source_port: int = 0, destination_port: int = 0, checksum: int = 0,
-                 payload: ProtocolElement = None):
+                 payload: bytes = b''):
         super().__init__()
         self.source_port = source_port
         self.destination_port = destination_port
@@ -53,12 +54,8 @@ class UDP(Layer4Protocol):
             raise ValueError("Checksum must be an unsigned 16 bit integer")
 
         # Check if the payload is a protocol element
-        if not isinstance(self.payload, ProtocolElement):
-            raise ValueError("Payload must be a protocol element")
-
-        # Check if all options are allowed
-        self.validate_contains([self.payload])
-        self.payload.validate()
+        if not isinstance(self.payload, bytes):
+            raise ValueError("Payload must be a sequence of bytes")
 
     def load_from(self, buffer: bytes, offset: int = 0, length: int = None) -> int:
         """
@@ -80,15 +77,12 @@ class UDP(Layer4Protocol):
         self.source_port, self.destination_port, payload_len, self.checksum = unpack_from('!HHHH', buffer, offset)
         my_offset += 8
 
-        # Determine the layer 5 type based on the destination port value
-        from dhcpkit_vpp.protocols.layer5_registry import protocol_layer5_registry
-        layer5_class = protocol_layer5_registry.get(self.destination_port, UnknownProtocolElement)
-
-        max_payload_len = max_length - my_offset
-        if payload_len - 8 > max_payload_len:
+        # The layer 5 payload is captured as bytes
+        payload_len = max_length - my_offset
+        if payload_len - 8 > payload_len:
             raise ValueError("UDP payload is longer than available buffer")
 
-        payload_len, self.payload = layer5_class.parse(buffer, offset=offset + my_offset, length=max_payload_len)
+        self.payload = buffer[offset + my_offset:offset + my_offset + payload_len]
         my_offset += payload_len
 
         return my_offset
@@ -99,11 +93,9 @@ class UDP(Layer4Protocol):
 
         :return: The buffer with the data from this element
         """
-        payload = self.payload.save()
-
         buffer = bytearray()
-        buffer.extend(pack('!HHHH', self.source_port, self.destination_port, len(payload) + 8, self.checksum))
-        buffer.extend(payload)
+        buffer.extend(pack('!HHHH', self.source_port, self.destination_port, len(self.payload) + 8, self.checksum))
+        buffer.extend(self.payload)
 
         return buffer
 
