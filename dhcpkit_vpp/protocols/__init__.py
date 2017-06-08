@@ -40,6 +40,7 @@ class Layer3Packet(ProtocolElement):
         """
         Return the pseudo header for this protocol
 
+        :param for_payload: Get the pseudo header for the given layer 4 protocol
         :return: The pseudo header bytes
         """
         raise NotImplementedError("Pseudo header not implemented for {}".format(self.__class__.__name__))
