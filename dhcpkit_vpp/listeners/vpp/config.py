@@ -10,29 +10,27 @@ from ipaddress import IPv6Address
 from os.path import realpath
 
 from ZConfig.matcher import SectionValue
-from dhcpkit.common.server.config_elements import ConfigSection
-from dhcpkit.ipv6 import SERVER_PORT
-from dhcpkit.ipv6.server.listeners import Listener
+from dhcpkit.common.server.config_elements import ConfigElementFactory
+from dhcpkit.ipv6 import SERVER_PORT, All_DHCP_Relay_Agents_and_Servers
+from dhcpkit.ipv6.server.listeners import Listener, ListeningSocketError
 from dhcpkit.ipv6.server.listeners.factories import ListenerFactory
 from dhcpkit.ipv6.utils import is_global_unicast
-from typing import Iterable, Optional
+from typing import Iterable, Optional, List
 
-from dhcpkit_vpp.listeners.vpp.interface_info import VPPInterfaceInfo
 from dhcpkit_vpp.listeners.vpp.vpp import VPPListener
+from dhcpkit_vpp.listeners.vpp.vpp_interface import VPPInterface
+from dhcpkit_vpp.vpp_papi import VPP
 
 logger = logging.getLogger(__name__)
 
 
-class VPPInterface(ConfigSection):
+class VPPInterfaceSection(ConfigElementFactory):
     """
     Configuration section representing a VPP interface
     """
 
     # noinspection PyTypeChecker
     name_datatype = staticmethod(str)
-
-    # Place to store the interface index later
-    if_index = None
 
     def validate_config_section(self):
         """
@@ -56,8 +54,8 @@ class VPPListenerFactory(ListenerFactory):
     sock_type = socket.SOCK_DGRAM
 
     def __init__(self, section: SectionValue):
-        self.vpp = None
-        self.found_interfaces = []
+        self.vpp = None  # type: VPP
+        self.found_interfaces = []  # type: List[VPPInterface]
 
         super().__init__(section)
 
@@ -68,19 +66,21 @@ class VPPListenerFactory(ListenerFactory):
         if not self.vpp or not self.vpp.connected:
             return
 
+        # Set a timeout so we don't hang here
+        self.vpp.read_timeout = 10
+
         logger.debug("Tell VPP we don't want punted packets anymore")
-        self.vpp.punt_socket(is_add=0,
-                             ipv=6, l4_protocol=socket.IPPROTO_UDP, l4_port=SERVER_PORT,
-                             pathname=self.name.encode('utf-8'))
+        self.vpp.api.punt_socket(is_add=0,
+                                 ipv=6, l4_protocol=socket.IPPROTO_UDP, l4_port=self.listen_port,
+                                 pathname=self.name.encode('utf-8'))
         logger.debug("Disconnect from VPP API")
         self.vpp.disconnect()
 
-    def vpp_connect(self):
+    def vpp_connect(self) -> VPP:
         """
         Connect to VPP based on this configuration
 
         :return: A connected VPP instance
-        :rtype: Any
         """
         # Don't connect again if we are already connected
         if self.vpp and self.vpp.connected:
@@ -91,8 +91,6 @@ class VPPListenerFactory(ListenerFactory):
             for root, dir_names, filenames in os.walk(self.section.api_definitions):
                 for filename in fnmatch.filter(filenames, '*.api.json'):
                     json_files.append(os.path.join(root, filename))
-
-        from dhcpkit_vpp.vpp_papi import VPP
 
         try:
             logger.debug("Loading VPP API")
@@ -173,54 +171,53 @@ class VPPListenerFactory(ListenerFactory):
 
         # Connect to VPP to check the interface names
         vpp = self.vpp_connect()
-        interfaces = vpp.sw_interface_dump()
+        interfaces = vpp.api.sw_interface_dump()
         if not interfaces:
             raise ValueError("Can't get interfaces from VPP")
 
         # Look for all the interfaces
-        for vpp_interface in self.section.vpp_interfaces:
+        for vpp_interface_section in self.section.vpp_interfaces:
             for interface in interfaces:
                 interface_name = interface.interface_name.decode('utf8').rstrip('\x00')
 
-                if interface_name == vpp_interface.name:
+                if interface_name == vpp_interface_section.name:
                     interface_index = interface.sw_if_index
-                    interface_l2 = interface.l2_address[:interface.l2_address_length]
+                    interface_mac = interface.l2_address[:interface.l2_address_length]
 
                     # Get all addresses on this interface
-                    raw_addresses = vpp.ip_address_dump(sw_if_index=interface_index, is_ipv6=1)
+                    raw_addresses = vpp.api.ip_address_dump(sw_if_index=interface_index, is_ipv6=1)
                     addresses = [IPv6Address(details.ip) for details in raw_addresses]
                     addresses.sort()
 
-                    # Store the index for later use
-                    vpp_interface.if_index = interface_index
-
                     # Find reply-from
-                    reply_from = self.find_reply_from(reply_from=vpp_interface.reply_from,
+                    reply_from = self.find_reply_from(reply_from=vpp_interface_section.reply_from,
                                                       interface_name=interface_name,
                                                       interface_addresses=addresses)
 
                     # Find link-address
-                    link_address = self.find_link_address(link_address=vpp_interface.link_address,
+                    link_address = self.find_link_address(link_address=vpp_interface_section.link_address,
                                                           interface_addresses=addresses)
 
-                    vpp_interface_info = VPPInterfaceInfo(
+                    vpp_interface = VPPInterface(
+                        vpp=vpp,
                         name=interface_name,
                         index=interface_index,
-                        accept_unicast=vpp_interface.accept_unicast,
-                        accept_multicast=vpp_interface.accept_multicast,
+                        mac_address=interface_mac,
+                        accept_unicast=vpp_interface_section.accept_unicast,
+                        accept_multicast=vpp_interface_section.accept_multicast,
                         reply_from=reply_from,
                         link_address=link_address
                     )
 
                     logger.debug("Found VPP interface {intf.index}: {intf.name} "
                                  "reply-from={intf.reply_from} "
-                                 "link-address={intf.link_address}".format(intf=vpp_interface_info))
+                                 "link-address={intf.link_address}".format(intf=vpp_interface))
 
-                    self.found_interfaces.append(vpp_interface_info)
+                    self.found_interfaces.append(vpp_interface)
                     break
 
             else:
-                raise ValueError("Can't find VPP interface {}".format(vpp_interface.name))
+                raise ValueError("Can't find VPP interface {}".format(vpp_interface_section.name))
 
     def create(self, old_listeners: Iterable[Listener] = None) -> VPPListener:
         """
@@ -229,4 +226,47 @@ class VPPListenerFactory(ListenerFactory):
         :param old_listeners: A list of existing listeners in case we can recycle them
         :return: A listener object
         """
-        # return VPPListener(self.found_interfaces, sock, marks=self.marks)
+        # Let interfaces initialise themselves
+        for vpp_interface in self.found_interfaces:
+            vpp_interface.activate()
+
+        if any([vpp_interface.accept_multicast for vpp_interface in self.found_interfaces]):
+            mroute_result = self.vpp.api.ip_mroute_add_del(next_hop_sw_if_index=0xffffffff,
+                                                           grp_address_length=128, is_add=1,
+                                                           is_ipv6=1, is_local=1, itf_flags=4,
+                                                           grp_address=All_DHCP_Relay_Agents_and_Servers.packed)
+            if mroute_result.retval != 0:
+                raise ListeningSocketError("Can't make VPP listen to the multicast address")
+
+        # See if there is a listener that has the right socket
+        old_listeners = list(old_listeners or [])
+        for listener in old_listeners:
+            if not isinstance(listener, VPPListener):
+                continue
+
+            if listener.listen_socket.getsockname() == self.name:
+                # This is the one!
+                sock = listener.listen_socket
+                break
+        else:
+            # Make space for our socket
+            try:
+                os.unlink(self.name)
+            except OSError:
+                if os.path.exists(self.name):
+                    raise ListeningSocketError("Can't unlink {} to make space for Unix domain socket".format(self.name))
+
+            # Set up Unix domain socket for VPP to connect to
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            sock.bind(self.name)
+
+        # Register DHCP port for punt
+        punt_result = self.vpp.api.punt_socket(is_add=1, ipv=6, l4_protocol=17, l4_port=SERVER_PORT,
+                                               pathname=self.name.encode('utf-8'))
+        if punt_result.retval != 0:
+            raise ListeningSocketError("Can't make VPP punt DHCPv6 traffic to DHCPKit")
+
+        # Connect our socket to the VPP instance
+        sock.connect(punt_result.pathname)
+
+        return VPPListener(self.found_interfaces, sock, marks=self.marks)

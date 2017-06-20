@@ -2,7 +2,7 @@
            prefix="dhcpkit_vpp.listeners.vpp.config">
     <!-- VPP interface -->
     <sectiontype name="vpp-interface"
-                 datatype=".VPPInterface">
+                 datatype=".VPPInterfaceSection">
         <description>
             VPP Interface to listen on
         </description>
