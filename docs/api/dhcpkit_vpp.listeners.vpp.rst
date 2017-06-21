@@ -12,6 +12,6 @@ Submodules
 .. toctree::
 
    dhcpkit_vpp.listeners.vpp.config
-   dhcpkit_vpp.listeners.vpp.interface_info
    dhcpkit_vpp.listeners.vpp.vpp
+   dhcpkit_vpp.listeners.vpp.vpp_interface
 
