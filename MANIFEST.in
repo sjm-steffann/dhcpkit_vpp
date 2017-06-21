@@ -2,3 +2,5 @@ include README.rst
 include LICENSE.rst
 include gpl.txt
 recursive-include docs *
+recursive-include examples *
+recursive-include dhcpkit_vpp *.xml
