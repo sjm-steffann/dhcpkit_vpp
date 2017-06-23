@@ -128,5 +128,5 @@ class Layer2FrameTestCase(FrameTestCase):
         self.assertEqual(message.save(), packet)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     unittest.main()
