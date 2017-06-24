@@ -1,10 +1,9 @@
 """
 Classes and constants for layer 2 frames
 """
-import codecs
 from struct import pack, unpack_from
 
-from dhcpkit.protocol_element import ProtocolElement, UnknownProtocolElement, ElementDataRepresentation
+from dhcpkit.protocol_element import ElementDataRepresentation, ProtocolElement, UnknownProtocolElement
 from dhcpkit.utils import normalise_hex
 
 from dhcpkit_vpp.protocols import Layer2Frame
@@ -39,16 +38,14 @@ class Ethernet(Layer2Frame):
         Nicer representation of source
         :return: Representation of source
         """
-        return ElementDataRepresentation(normalise_hex(codecs.encode(self.source, 'hex').decode('ascii'),
-                                                       include_colons=True))
+        return ElementDataRepresentation(normalise_hex(self.source, include_colons=True))
 
     def display_destination(self) -> ElementDataRepresentation:
         """
         Nicer representation of destination
         :return: Representation of destination
         """
-        return ElementDataRepresentation(normalise_hex(codecs.encode(self.destination, 'hex').decode('ascii'),
-                                                       include_colons=True))
+        return ElementDataRepresentation(normalise_hex(self.destination, include_colons=True))
 
     def display_ethertype(self) -> ElementDataRepresentation:
         """
