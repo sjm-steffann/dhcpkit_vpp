@@ -19,6 +19,3 @@ Distribution status
 
 .. image:: https://img.shields.io/pypi/pyversions/dhcpkit_vpp.svg
   :target: https://pypi.python.org/pypi/dhcpkit_vpp
-
-.. image:: https://img.shields.io/pypi/dw/dhcpkit_vpp.svg
-  :target: https://pypi.python.org/pypi/dhcpkit_vpp
